@@ -21,11 +21,18 @@ When a web page is request (e.g., /doc/test), the following the accomplished:
    * the CGI script "doc" is executed
    * the script reads in a file "test.md" under the "docs" directory
    * the file is parsed for MarkDown syntax and converted to an HTML snipit
-   * the script read the file "tmpl.html"
-   * HTML from test.md is inserted into the content of "tmpl.html" in place of "CONTENT"
-   * the title of the web page is parsed from the "H1" HTML tag an inserted in plage of "TITLE"
+   * the script reads the file "tmpl.html"
+   * HTML from "test.md" is inserted into the content of "tmpl.html" in place of "CONTENT"
+   * the title of the web page is parsed from the "H1" HTML tag and inserted in place of "TITLE"
    * the document is returned to the requesting web browser
 
 ## Customization
 
-You may create new files with the "md" extensions under the "docs" directory. 
+   * You may create new files with the "md" extensions under the "docs" directory. 
+   * You may create new subdirectories under "docs".
+   * You may customize the template file "tmpl.html" as needed.
+   * You may reference other resource files like javascript, css, and images from the main template
+   * You may use the "tmpl.html" file to template other CGI script to unify the website appearance across different scripts and content management systems
+   
+   
+   
