@@ -1,6 +1,6 @@
 # NewtonCMS - a lightweight CMS for mostly static content
 
-This is not a sophisticated comtent management system, but it is sufficient in scale for many websites.  It is very easy to deploy and modify as needed.  
+This is not a sophisticated content management system, but it is sufficient in scale for many websites.  It is very easy to deploy and modify as needed.  
 
 ## Installation
 
@@ -12,4 +12,20 @@ Web page files under this directory should end in the ".md" extension (for "Mark
 
 Use a web browser to visit the test page http://domain.com/doc/test . 
 This corresponds to the markdown source file "test.md" in the "docs" directory.
+If you see a minimally formatted test page, then you have completed initial installations.
 
+## Theory of operation
+
+When a web page is request (e.g., /doc/test), the following the accomplished:
+
+   * the CGI script "doc" is executed
+   * the script reads in a file "test.md" under the "docs" directory
+   * the file is parsed for MarkDown syntax and converted to an HTML snipit
+   * the script read the file "tmpl.html"
+   * HTML from test.md is inserted into the content of "tmpl.html" in place of "CONTENT"
+   * the title of the web page is parsed from the "H1" HTML tag an inserted in plage of "TITLE"
+   * the document is returned to the requesting web browser
+
+## Customization
+
+You may create new files with the "md" extensions under the "docs" directory. 
