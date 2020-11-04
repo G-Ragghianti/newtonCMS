@@ -1,0 +1,169 @@
+#!/usr/bin/perl
+
+# todo: list of unlinked pages at the bottom of index page
+#
+#
+#
+
+use strict;
+use warnings;
+use CGI qw/header redirect/;
+use Text::MultiMarkdown 'markdown';
+use HTML::Template;
+use HTML::TreeBuilder;
+use HTML::Tidy;
+
+my $PATH = $ENV{PATH_INFO} || '';
+(my $DIR = $PATH) =~ s/\/[^\/]+$//;
+
+my ($file, $status) = request();
+
+my $content = HTML::TreeBuilder->new_from_content( markdown( getfile($file) ) );
+twiki($content);
+deadlinks($content);
+my $h1 = $content->find('h1');
+my ($title) = defined($h1) ? $h1->content_list() : '';
+my $bread = bread();
+
+my $tmpl = HTML::Template->new(
+    filename => 'tmpl.html',
+    option => 'value',
+    die_on_bad_params => 0,
+    case_sensitive => 1,
+    );
+$tmpl->param(content=>$content->as_HTML, title=>$title, bread=>$bread);
+
+print header(
+  -status => $status,
+  -charset => 'UTF-8',
+  );
+print HTML::Tidy->new({
+    'char-encoding' => 'utf8',
+    'doctype' => 'transitional',
+    'output-xhtml' => 'yes',
+    'preserve-entities' => 'yes',
+  })->clean( $tmpl->output );
+
+#---------------------------------------------------
+
+sub request {
+  my $file = "./docs$PATH";
+  if(-d $file and $file !~ /\/$/ and $PATH ne ''){
+    print redirect("/doc$PATH/");
+    exit;
+  }
+  if(-d $file){
+    $file .= '/index.md' if -e "$file/index.md";
+  } elsif(-e "$file.md"){
+    $file .= '.md';
+  } else {
+    return '404.md',404;
+  }
+  return $file,200;
+}
+
+sub twiki {
+  my $h = shift;
+  my %skip = map {$_,1} qw/a pre code/;
+  my @list = $h->descendants(); # get all elements
+  for(@list){
+    my $element = $_;
+    next if $skip{ $element->tag };
+    my @content = $element->detach_content();
+    for(@content){
+      if(ref $_){
+        $element->push_content($_);
+        next;
+      }
+      $element->push_content(makelink($_)) for split /([\w!]+)/;
+    }
+  }
+}
+
+sub deadlinks {
+  my $h = shift;
+  my @links = $h->find_by_tag_name('a');
+  for(@links){
+    my $element = $_;
+    my $href = $element->attr('href');
+    next unless defined $href and $href =~ /^\w+$/;
+    my $localfile = "docs/$DIR/$href";
+    next if -d $localfile;
+    next if -f "$localfile.md";
+    my ($location) = findfile($href, 'docs');
+    if(defined $location){
+      $location =~ s/^docs\//\/doc\//;
+      $location =~ s/\.md$//;
+      $element->attr('href', $location);
+    } else {
+      $element->attr('class', 'deadlink');
+    }
+  }
+}
+
+sub findfile {
+  my ($file, $dir) = @_;
+  return $dir if $dir =~ /\/$file.md$/ or $dir =~ /\/$file$/;
+  my @found = map { findfile($file, $_) } glob("$dir/*");
+  return @found;
+}
+
+sub getfile {
+  my $file = shift;
+  return DirectoryIndex($file) if -d $file;
+  open(IN, $file) or return;
+  my $out = join('', <IN>);
+  close IN;
+  return $out;
+}
+
+sub DirectoryIndex {
+  my $dir = shift;
+  opendir(DIR, $dir) or die $!;
+  my @entries = sort {$a cmp $b} readdir(DIR);
+  close DIR;
+  for(@entries){
+    chomp;
+    my $style = '';
+    if(-d "$dir/$_"){
+      $style = 'font-weight:bold';
+      $_ .= '/';
+    }
+    s/\.md$//;
+    $_ = "*  <a href=\"$_\" style=\"$style\">$_</a>\n";
+  }
+  return join('', @entries);
+}
+
+sub makelink {
+  my ($text, $force) = @_;
+  if($text =~ /^!(.*)$/){ 
+    # Don't autolink camelcase words that begin with "!"
+    return $1;
+  }
+  return $text unless $force or $text =~ /^[A-Z]+[a-z0-9]+[A-Z]+/;
+  my $element = HTML::Element->new('a',href=>$text);
+  (my $disp = $text) =~ s/([a-z]+)([A-Z]+)/$1 $2/gs;
+  $disp =~ s/^.+\///;
+  $disp =~ s/($_)/lc($1)/eg for qw/Of And The/;
+  $element->push_content($disp);
+  return $element;
+}
+
+sub bread {
+  return unless $PATH ne '';
+  my @path = grep /\S+/, split /\//, $PATH;
+  my $html = HTML::Element->new('span');
+  my $c = 0;
+  for(@path){
+    my $url = '/doc/' . join('/', @path[0 .. $c++]);
+    my $link = makelink($url, 'force');
+    $html->push_content(' &raquo; ', $link);
+  }
+  my $elements = $html->content_array_ref();
+  return unless @$elements;
+  $elements->[-1]->tag('b');
+  $elements->[-1]->attr('href', undef);
+  return $html->as_HTML('');  
+}
+

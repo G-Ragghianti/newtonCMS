@@ -1,0 +1,8 @@
+
+DirectoryIndex /doc
+Options ExecCGI
+<FilesMatch "doc">
+  SetHandler cgi-script
+</FilesMatch>
+
+
