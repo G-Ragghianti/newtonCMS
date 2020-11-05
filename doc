@@ -33,7 +33,7 @@ sub main {
 
   my ($file, $status) = request($path);
   my $content = markdown( getfile $file );
-  my ($title) = $content =~ /<h1>(.+)<\/h1>/;
+  my ($title) = $content =~ /<h1[^>]*>(.+)<\/h1>/;
   my $tmpl = getfile('tmpl.html');
   $tmpl =~ s/CONTENT/$content/s;
   $tmpl =~ s/TITLE/$title/s;
